@@ -28,8 +28,40 @@
         return false;
       });
       socket.on('chat message', function(msg){
+	    $(document).prop('title', msg);
+		notifyMe(msg);
         $('#messages').append($('<li>').text(msg));
       });
+	  
+	  
+	  // request permission on page load
+document.addEventListener('DOMContentLoaded', function () {
+  if (Notification.permission !== "granted")
+    Notification.requestPermission();
+});
+
+function notifyMe(msg) {
+  if (!Notification) {
+    alert('Desktop notifications not available in your browser. Try Chromium.'); 
+    return;
+  }
+
+  if (Notification.permission !== "granted")
+    Notification.requestPermission();
+  else {
+    var notification = new Notification('New Message', {
+      icon: 'http://res.sastasundar.com/incom/incom_images/logo.png',
+      body: msg,
+    });
+
+    notification.onclick = function () {
+      //window.open("http://stackoverflow.com/a/13328397/1269037");      
+    };
+    
+  }
+
+}
+
     </script>
   </body>
 </html>
