@@ -8,7 +8,7 @@
             form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
             form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
             form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-            #messages { list-style-type: none; margin: 0; padding: 0; }
+            #messages { list-style-type: none; margin: 0; padding: 0;}
             #messages li { padding: 5px 10px; }
             #messages li:nth-child(odd) { background: #eee; }
 
@@ -20,7 +20,7 @@
                 position: fixed;
                 width: 100%;
             }
-            
+
             .send-btn {
                 border-radius: 0 !important;
                 bottom: 0;
@@ -28,13 +28,35 @@
                 position: fixed;
                 right: 0;
             }
+            .conversation {
+                overflow: auto;
+                height: 300px;
+                margin-left: 210px;
+            }
 
+            .users label {
+                margin: 5px;
+                display: inline-block;
+            }
+            .users {
+                position: fixed;
+                top: 0px;
+                width: 200px;
+                background: #ddd;
+                bottom: 0px;
+                padding: 5px;
+            }
 
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/css/bootstrap.min.css">
     </head>
     <body>
-        <ul id="messages"></ul>
+        <div id="conversation" class="conversation">
+            <ul id="messages"></ul>
+        </div>
+        <div id="users" class="users">
+
+        </div>
 
         <div id="editor" class="editor form-control" contenteditable="true"></div>
         <button id="send-btn" class="send-btn btn btn-info">Send</button>
@@ -45,34 +67,63 @@
         <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
         <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
         <script>
-            var socket = io();
-//            $('form').submit(function () {
-//                socket.emit('chat message', $('#m').val());
-//                $('#m').val('');
-//                return false;
-//            });
+            do {
+                var name = prompt("enter user name : ");
+                name = name ? name.trim() : '';
+            }while(name.length == 0)
             
-            $('#send-btn').on('click', function(){
-                socket.emit('chat message', $('#editor').html());
+
+            var socket = io();
+
+            $('#send-btn').on('click', function () {
+
+                var to = $('.to_user:checked').val() || 'all';
+
+                var msg = {
+                    to: to,
+                    from: name,
+                    body: $('#editor').html()
+                }
+                
+                socket.emit('chat message', msg);
+                output(msg);
                 $('#editor').html('');
                 return false;
             });
-            
-            $("#editor").on('keydown', function(e) {
+
+            $("#editor").on('keydown', function (e) {
                 if (e.keyCode == 13) {
                     $('#send-btn').trigger('click');
                 }
             });
-            
-            
 
-            socket.on('chat message', function (msg) {
-                console.log(typeof(msg));
-                $(document).prop('title', msg.msg);
-                notifyMe(msg.name);
-                $('#messages').append($('<li>').html('<b>' + msg.name + "</b>:<br/>" +msg.msg));
+            $(window).on('resize', function () {
+                setConvBoxHeight();
             });
 
+            socket.on('cast' + name, function (message) {
+                output(message);
+            });
+
+            socket.on('chat message', function (msg) {
+                console.log(typeof (msg));
+                $(document).prop('title', msg.msg);
+                notifyMe(msg.name);
+                $('#messages').append($('<li>').html('<b>' + msg.name + "</b>:<br/>" + msg.msg));
+                setScrollPosition();
+            });
+
+            socket.on('connect', function () {
+                socket.emit('new-connection', {name: name});
+            });
+            
+            socket.on('new-connection', function (msg) {
+                setUsers(msg.users);
+            });
+            
+            socket.on('do-disconnect', function (msg) {
+                setUsers(msg.users);
+            });
 
             // request permission on page load
             document.addEventListener('DOMContentLoaded', function () {
@@ -107,6 +158,37 @@
                 }
 
             }
+
+            function setScrollPosition() {
+                var scrolltopval = $('#messages').height() - $('#conversation').height();
+                $('#conversation').scrollTop(scrolltopval)
+            }
+
+            function setConvBoxHeight() {
+                var h = window.innerHeight - $('#editor').height() - 10;
+                $('#conversation').height(h);
+            }
+            setConvBoxHeight();
+
+            function output(msg) {
+                console.log(msg)
+                notifyMe(msg.from);
+                $('#messages').append($('<li>').html('<b>' + msg.from + "</b>:<br/>" + msg.body));
+                console.log($('#messages').html());
+                setScrollPosition();
+            }
+
+            function setUsers(users) {
+                users = users || [];
+                var str = '';
+                for (var x in users) {
+                    str += '<input type="radio" class="to_user" name="to_user" id="user ' + x + '" value="' + users[x] + '"><label for="user ' + x + '">' + users[x] + '</label><br/>';
+                }
+
+                $('#users').html(str);
+
+            }
+            setUsers();
 
         </script>
     </body>
