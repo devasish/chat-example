@@ -1,7 +1,8 @@
 <!doctype html>
 <html>
     <head>
-        <title>Socket.IO chat</title>
+        <title>SastaSundar.com: Online Pharmacy for Healthcare and Ayurvedic products</title>
+        <link rel="shortcut icon" href="http://localhost/sspl_cdn/trunk/incom/favicon.png" type="image/x-icon">
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font: 13px Helvetica, Arial; }
@@ -54,29 +55,27 @@
         <div id="conversation" class="conversation">
             <ul id="messages"></ul>
         </div>
-        <div id="users" class="users">
-
-        </div>
+        
+        <div id="users" class="users"></div>
 
         <div id="editor" class="editor form-control" contenteditable="true"></div>
         <button id="send-btn" class="send-btn btn btn-info">Send</button>
 
-        <!--        <form action="">
-                    <input id="m" autocomplete="off" /><button>Send</button>
-                </form>-->
         <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
         <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
         <script>
             do {
                 var name = prompt("enter user name : ");
-                name = name ? name.trim() : '';
-            }while(name.length == 0)
-            
+                name = (typeof (name) == 'string' && name != 'null') ? name.trim() : '';
+            } while (name.length == 0);
+
 
             var socket = io();
-
             $('#send-btn').on('click', function () {
-
+                if ($('#editor').text().trim().length == 0) {
+                    console.log("Blank Message")
+                    return;
+                }
                 var to = $('.to_user:checked').val() || 'all';
 
                 var msg = {
@@ -84,18 +83,42 @@
                     from: name,
                     body: $('#editor').html()
                 }
-                
+
                 socket.emit('chat message', msg);
-                output(msg);
+                if (msg.to != 'all')
+                    output(msg);
                 $('#editor').html('');
                 return false;
             });
 
+            $("#editor").focus();
+            var altKey = false;
             $("#editor").on('keydown', function (e) {
+                altKey = e.altKey;
+            });
+            
+            $("#editor").on('keyup', function (e) {
+                var el = $(this)
                 if (e.keyCode == 13) {
-                    $('#send-btn').trigger('click');
+                    if (false && altKey) {
+                        var val = $(this).html();
+                        if (document.getSelection()) {
+                            var x = document.getSelection().anchorOffset;
+                            if      (e.keyCode == 38) x = 0;
+                            else if (e.keyCode == 40) x = val.length;
+                            else if (e.keyCode == 37) x--;
+                            else if (e.keyCode == 39) x++;
+
+                            var newVal = val.slice(0, x) + '<br/>' + val.slice(x);
+                        }
+                        $(this).html("").html(newVal);
+                    }
+                    else {
+                        $('#send-btn').trigger('click');
+                    }
                 }
             });
+            
 
             $(window).on('resize', function () {
                 setConvBoxHeight();
@@ -106,21 +129,17 @@
             });
 
             socket.on('chat message', function (msg) {
-                console.log(typeof (msg));
-                $(document).prop('title', msg.msg);
-                notifyMe(msg.name);
-                $('#messages').append($('<li>').html('<b>' + msg.name + "</b>:<br/>" + msg.msg));
-                setScrollPosition();
+                output(msg);
             });
 
             socket.on('connect', function () {
                 socket.emit('new-connection', {name: name});
             });
-            
+
             socket.on('new-connection', function (msg) {
                 setUsers(msg.users);
             });
-            
+
             socket.on('do-disconnect', function (msg) {
                 setUsers(msg.users);
             });
@@ -171,10 +190,8 @@
             setConvBoxHeight();
 
             function output(msg) {
-                console.log(msg)
                 notifyMe(msg.from);
                 $('#messages').append($('<li>').html('<b>' + msg.from + "</b>:<br/>" + msg.body));
-                console.log($('#messages').html());
                 setScrollPosition();
             }
 
@@ -182,7 +199,8 @@
                 users = users || [];
                 var str = '';
                 for (var x in users) {
-                    str += '<input type="radio" class="to_user" name="to_user" id="user ' + x + '" value="' + users[x] + '"><label for="user ' + x + '">' + users[x] + '</label><br/>';
+                    if (users[x] != name)
+                        str += '<input type="radio" class="to_user" name="to_user" id="user ' + x + '" value="' + users[x] + '"><label for="user ' + x + '">' + users[x] + '</label><br/>';
                 }
 
                 $('#users').html(str);

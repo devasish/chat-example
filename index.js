@@ -13,13 +13,17 @@ app.get('/', function (req, res) {
 
 io.on('connection', function (socket) {
     socket.on('chat message', function (message) {
+        console.log(socket.handshake.address);
         var msg     = message;
         var from    = msg.from;
         var to      = msg.to;
         var body    = msg.body;
-        console.log(msg);
-        if (validUser()) {
+        if (validUser(msg)) {
             io.emit('cast' + to, msg)
+        }
+        else {
+            console.log("else")
+            io.emit('chat message', msg)
         }
 //        io.emit('chat message', name + " : " + msg);
         //io.emit('chat message', {name : name, msg : msg});
@@ -27,10 +31,14 @@ io.on('connection', function (socket) {
     });
     
     socket.on('new-connection', function(message) {
-        //console.log(socket.id + ' connected');
+        console.log(typeof(message.name))
+        if (message.name == 'null' || message.name == 'null') {
+            message.name = socket.handshake.address;
+        }
         
         users.push(message.name);
         socketIdName[socket.id] = message.name;
+        //socketIdIP[socket.id]   = socket.handshake.address;
         
         io.emit('new-connection', {users : users});
     });
@@ -43,10 +51,10 @@ io.on('connection', function (socket) {
     });
 });
 
-http.listen(3030, function () {
+http.listen(3000, function () {
     console.log('listening on *:3030');
 });
 
-function validUser() {
-    return true;
+function validUser(msg) {
+    return ((msg.to == 'all')? false : true);
 }
